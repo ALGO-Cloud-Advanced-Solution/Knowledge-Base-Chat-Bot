@@ -1,0 +1,4 @@
+requests
+botocore
+streamlit
+python-dotenv
