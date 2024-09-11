@@ -16,7 +16,7 @@ load_dotenv()
 # AWS Credentials
 aws_access_key = os.getenv("aws_access_key")
 aws_secret_key = os.getenv("aws_secret_key")
-aws_region = os.getenv("aws_region", "us-east-1")
+aws_region = os.getenv("aws_region")
 service = 'lambda'
 
 # API Gateway URL
@@ -45,25 +45,31 @@ def create_signed_request(method, url, headers, payload):
 
 def handle_response(response_json):
     # check language thing
+    try:
+        if "detected_language" in response_json:
+            # if frist msg then store the detectd langauage in it
+            if st.session_state.lang == "":
+                st.session_state.lang = response_json.get("detected_language", st.session_state.lang)
 
-    if "detected_language" in response_json:
-        # if frist msg then store the detectd langauage in it
-        if st.session_state.lang == "":
-            st.session_state.lang = response_json.get("detected_language", st.session_state.lang)
+            msg = response_json["body"]
 
-        msg = response_json["body"]
+            # check if change language has been requested
+            change_lang = True if (msg[-4:] == "done" or msg[-4:] == "تمام") else False
 
-        # check if change language has been requested
-        change_lang = True if (msg[-4:] == "done" or msg[-4:] == "تمام") else False
+            if (change_lang):
+                st.session_state.lang = ""
 
-        if (change_lang):
-            st.session_state.lang = ""
+            return msg if not change_lang else msg[:-4]
+        else:
+            #TODO: Handle file name
+            msg = response_json["body"]
+            return msg
+    except Exception as e:
+        if st.session_state.lang == "en":
+            return "Please Try Again!"
+        else:
+            return "حاول مرة اخرى!"
 
-        return msg if not change_lang else msg[:-4]
-    else:
-        #TODO: Handle file name
-        msg = response_json["body"]
-        return msg
 
 
 def invoke_lambda(payload):
@@ -76,8 +82,10 @@ def invoke_lambda(payload):
         response.raise_for_status()  # Raise an error for bad HTTP status codes
         return handle_response(response.json())
     except requests.exceptions.RequestException as e:
-        st.error(f"Error invoking Lambda function: {e}")
-        return None
+        if st.session_state.lang == "en":
+            return "Please Try Again!"
+        else:
+            return "حاول مرة اخرى!"
 
 
 def main():
@@ -141,4 +149,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
