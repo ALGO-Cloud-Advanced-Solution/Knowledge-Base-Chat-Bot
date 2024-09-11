@@ -16,7 +16,7 @@ load_dotenv()
 # AWS Credentials
 aws_access_key = os.getenv("aws_access_key")
 aws_secret_key = os.getenv("aws_secret_key")
-aws_region = os.getenv("aws_region")
+aws_region = os.getenv("aws_region", "us-east-1")
 service = 'lambda'
 
 # API Gateway URL
