@@ -33,7 +33,7 @@ jobs:
       - name: build and push docker image to registry
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: Frontend_Streamlit/.
           push: true
           tags: |
             3mrfat7y/orderly:${{ env.DATE_TAG }}
