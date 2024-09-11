@@ -1,0 +1,100 @@
+name: Orderly Frontend CI Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        default: 'master'
+        description: 'building the images from the master branch'
+        required: true
+        type: string
+
+jobs:
+  CI:
+    name: pushing Image To Docker Hub
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set-date.outputs.image_tag }}
+      
+    steps:
+      - name: check repository
+        uses: actions/checkout@v4
+
+      - name: Set Date Environment Variable
+        id: set-date
+        run: echo "DATE_TAG=$( date +'%d.%m.%y-%I.%M.%p' | sed 's/AM/am/g; s/PM/pm/g' | sed 's/^0//g' )" >> $GITHUB_ENV
+
+      - name: login to docker registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{secrets.DOCKER_USERNAME}}
+          password: ${{secrets.DOCKER_PASSWORD}}
+
+      - name: build and push docker image to registry
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            3mrfat7y/orderly:${{ env.DATE_TAG }}
+
+
+      # # Save the DATE_TAG as an artifact for use in the CD pipeline
+      # - name: Upload DATE_TAG as an artifact
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     name: date-image-tag
+      #     path: $GITHUB_ENV
+
+
+
+  # CD:
+  #   name: Deployment Container To Ec2
+  #   runs-on: ubuntu-latest
+  #   needs: CI
+
+  #   steps:
+  #     - name: Set Up SSH Key
+  #       run: |
+  #         echo "${{ secrets.EC2_PRIVATE_KEY }}" > test.pem
+  #         chmod 600 test.pem
+
+  #     - name: Deploy to EC2
+  #       run: |
+  #         ssh -i test.pem -o StrictHostKeyChecking=no ubuntu@ec2-3-92-194-53.compute-1.amazonaws.com << 'EOF'
+
+  #           # Fetch latest tag from Docker Hub and pull the latest image
+  #           repo="3mrfat7y/orderly"
+
+  #           # Fetch all tags from Docker Hub
+  #           tags=$(curl -s https://registry.hub.docker.com/v2/repositories/$repo/tags | jq -r '.results[].name')
+
+  #           # Sort tags and get the latest one (assuming versioned tags)
+  #           latest_tag=$(echo "$tags" | grep -E '^[0-9]{1,2}\.[0-9]{2}\.[0-9]{2}-[0-9]{2}\.[0-9]{2}\.(am|pm)$' | sort -Vr | head -n 1)
+
+  #           # Pull the latest version of the Docker image
+  #           echo "Pulling the latest image with tag: $latest_tag"
+  #           sudo docker pull $repo:$latest_tag || true
+
+  #           # Stop any running containers
+  #           sudo docker stop $(sudo docker ps -aq) || true
+
+  #           # Run the container with the latest image tag
+  #           sudo docker run -d --name orderly_frontend$latest_tag -p 8020:8501 $repo:$latest_tag
+
+  #         EOF
+
+  #       - name: delete key
+  #         run: sudo rm -f test.pem
+
+        # - name: Deploy New Docker Container
+        #   uses: appleboy/ssh-action@v0.1.7
+        #   with:
+        #     user: ubuntu
+        #     host: ec2-3-92-194-53.compute-1.amazonaws.com
+        #     key: ${{secrets.EC2_PRIVATE_KEY}}
+        #     port: 22
+        #     script: |
+        #       sudo docker pull 3mrfat7y/orderly:${{ env.DATE_TAG }}
+        #       sudo docker stop $(sudo docker ps -aq)
+        #       sudo docker run -d --name orderly_frontend -p 80:5000 3mrfat7y/orderly:${{env.DATE_TAG}}
