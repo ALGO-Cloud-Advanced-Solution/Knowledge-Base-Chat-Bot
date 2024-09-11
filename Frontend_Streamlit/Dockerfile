@@ -15,7 +15,7 @@ COPY app.py /app/app.py
 
 ENV aws_access_key=$ORDERLYACCESSKEY
 ENV aws_secret_key=$ORDERLYSECRETACCESSKEY
-
+ENV aws_region=us-east-1
 
 # Run the application
 CMD ["streamlit","run", "app.py"]
