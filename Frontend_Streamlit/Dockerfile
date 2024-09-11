@@ -13,6 +13,10 @@ RUN pip3 install -r requirements.txt
 # Copy the application files
 COPY app.py /app/app.py
 
+ENV aws_access_key=$ORDERLYACCESSKEY
+ENV aws_secret_key=$ORDERLYSECRETACCESSKEY
+
+
 # Run the application
-CMD ["python3", "/app/app.py"]
+CMD ["streamlit","run", "app.py"]
 
